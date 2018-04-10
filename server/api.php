@@ -61,6 +61,14 @@ class FileApi {
     
     function _pathFromUrl($url) {
         $url = explode('/',$url,4);
+        array_shift($url);
+        if ($url) {
+            $fileName = implode(DIRECTORY_SEPARATOR, $url);
+            if (false !== strpos($fileName, 'http')) {
+                $fileName = null;
+            }
+        }
+
         $url = @$url[3] ? "/".$url[3] : "";
         $url = str_replace("..","_",$url);
         
@@ -71,7 +79,11 @@ class FileApi {
         if ($base=="" || strpos($url,$base)===0) {
             $rel = substr($url,strlen($base));
             $path = realpath(__DIR__."/../..").$rel;
-            return $path;
+            if ($fileName) {
+                return $path.DIRECTORY_SEPARATOR.$fileName;
+            } else {
+                return $path;
+            }
         }
         return false;
     }
@@ -102,7 +114,16 @@ class FileApi {
     
     function file() {
         $path = $this->_pathFromUrl(@$_REQUEST['path']);
-        if (!$path || !is_file($path)) { echo "ERROR: Invalid file path"; die(); }
+        if (!$path || !is_file($path)) {
+            //try fallback
+            $url = explode('/',@$_REQUEST['path'],4);
+            $fileName = $url[count($url)-1];
+            $path = $path.DIRECTORY_SEPARATOR.$fileName;
+            if (!$path || !is_file($path)) {
+                echo "ERROR: Invalid file path";
+                die();
+            }
+        }
         readfile($path);
     }
     
